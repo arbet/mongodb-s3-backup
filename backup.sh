@@ -78,20 +78,20 @@ echo $DIR
 # Store the current date in YYYY-mm-DD-HHMMSS
 DATE=$(date -u "+%F-%H%M%S")
 FILE_NAME="backup-$DATE"
-ARCHIVE_NAME="$FILE_NAME.tar.gz"
+ARCHIVE_NAME="$FILE_NAME.tar.bz2"
 
-# Lock the database
+# Lock the database (disabled because of unlock error)
 # Note there is a bug in mongo 2.2.0 where you must touch all the databases before you run mongodump
-mongo -username "$MONGODB_USER" -password "$MONGODB_PASSWORD" admin --eval "var databaseNames = db.getMongo().getDBNames(); for (var i in databaseNames) { printjson(db.getSiblingDB(databaseNames[i]).getCollectionNames()) }; printjson(db.fsyncLock());"
+# mongo --username "$MONGODB_USER" --password "$MONGODB_PASSWORD" admin --eval "var databaseNames = db.getMongo().getDBNames(); for (var i in databaseNames) { printjson(db.getSiblingDB(databaseNames[i]).getCollectionNames()) }; printjson(db.fsyncLock());"
 
 # Dump the database
-mongodump -username "$MONGODB_USER" -password "$MONGODB_PASSWORD" --out $DIR/backup/$FILE_NAME
+mongodump --username "$MONGODB_USER" --password "$MONGODB_PASSWORD" --out $DIR/backup/$FILE_NAME
 
-# Unlock the database
-mongo -username "$MONGODB_USER" -password "$MONGODB_PASSWORD" admin --eval "printjson(db.fsyncUnlock());"
+# Unlock the database (disabled because of unlock error)
+# mongo --username "$MONGODB_USER" --password "$MONGODB_PASSWORD" admin --eval "printjson(db.fsyncUnlock());"
 
 # Tar Gzip the file
-tar -C $DIR/backup/ -zcvf $DIR/backup/$ARCHIVE_NAME $FILE_NAME/
+tar -C $DIR/backup/ -jcvf $DIR/backup/$ARCHIVE_NAME $FILE_NAME/
 
 # Remove the backup directory
 rm -r $DIR/backup/$FILE_NAME
@@ -112,3 +112,6 @@ curl -X PUT \
 --header "Authorization: AWS $AWS_ACCESS_KEY:$SIGNATURE" \
 --upload-file $DIR/backup/$ARCHIVE_NAME \
 https://$S3_BUCKET.s3-$S3_REGION.amazonaws.com/$ARCHIVE_NAME
+
+# Remove the backup files
+rm -rf $DIR/backup/
