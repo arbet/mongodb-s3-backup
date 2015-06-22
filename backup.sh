@@ -5,10 +5,13 @@
 # To Do - Add logging of output.
 # To Do - Abstract bucket region to options
 
+# Exit immediately if a command exits with a non-zero status
 set -e
 
+# Add local bin directory to our path
 export PATH="$PATH:/usr/local/bin"
 
+#Prints the backup usage dialog page
 usage()
 {
 cat << EOF
@@ -71,7 +74,8 @@ do
   esac
 done
 
-if [[ -z $MONGODB_USER ]] || [[ -z $MONGODB_PASSWORD ]] || [[ -z $AWS_ACCESS_KEY ]] || [[ -z $AWS_SECRET_KEY ]] || [[ -z $S3_REGION ]] || [[ -z $S3_BUCKET ]] || [[ -z $MONGODB_HOST ]]
+# Print usage if arguments not set(?)
+if [[ -z $AWS_ACCESS_KEY ]] || [[ -z $AWS_SECRET_KEY ]] || [[ -z $S3_REGION ]] || [[ -z $S3_BUCKET ]] || [[ -z $MONGODB_HOST ]]
 then
   usage
   exit 1
@@ -85,18 +89,11 @@ DATE=$(date -u "+%F-%H%M%S")
 FILE_NAME="backup-$DATE"
 ARCHIVE_NAME="$FILE_NAME.tar.bz2"
 
-# Lock the database (disabled because of unlock error)
-# Note there is a bug in mongo 2.2.0 where you must touch all the databases before you run mongodump
-# mongo --host "$MONGODB_HOST" --username "$MONGODB_USER" --password "$MONGODB_PASSWORD" admin --eval "var databaseNames = db.getMongo().getDBNames(); for (var i in databaseNames) { printjson(db.getSiblingDB(databaseNames[i]).getCollectionNames()) }; printjson(db.fsyncLock());"
-
 # Dump the database
 mongodump --host "$MONGODB_HOST" --username "$MONGODB_USER" --password "$MONGODB_PASSWORD" --out $DIR/backup/$FILE_NAME
 
-# Unlock the database (disabled because of unlock error)
-# mongo --host "$MONGODB_HOST" --username "$MONGODB_USER" --password "$MONGODB_PASSWORD" admin --eval "printjson(db.fsyncUnlock());"
-
 # Tar Gzip the file
-tar -C $DIR/backup/ -jcvf $DIR/backup/$ARCHIVE_NAME $FILE_NAME/
+tar --ignore-failed-read -C $DIR/backup/ -jcvf $DIR/backup/$ARCHIVE_NAME $FILE_NAME/
 
 # Remove the backup directory
 rm -r $DIR/backup/$FILE_NAME
